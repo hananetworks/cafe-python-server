@@ -16,7 +16,7 @@ jobs:
     env:
       ARTIFACT_DIR: out
       GITHUB_TOKEN: ${{ github.token }}
-      PIP_CACHE_DIR: ${{ runner.temp }}\pip-cache
+      PIP_CACHE_DIR: ${{ github.workspace }}\.runtime-work\pip-cache
 
     steps:
       - name: Checkout code and LFS assets
