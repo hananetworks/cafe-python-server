@@ -28,8 +28,37 @@ if ($SkipEnginePackage) {
         "-x!tts_models\*"
     )
     & 7z @engineZipArgs
+    $EnginePackageExitCode = $LASTEXITCODE
     Pop-Location
+    if ($EnginePackageExitCode -ne 0) {
+        throw "7-Zip failed to create python-engine.zip (exit=$EnginePackageExitCode)."
+    }
 }
+
+if (-not (Test-Path "python-engine.zip")) {
+    throw "python-engine.zip was not created."
+}
+
+$EngineArchive = Get-Item "python-engine.zip"
+if ($EngineArchive.Length -lt 1MB) {
+    throw "python-engine.zip is unexpectedly small: $($EngineArchive.Length) bytes."
+}
+
+& 7z t "python-engine.zip"
+if ($LASTEXITCODE -ne 0) {
+    throw "python-engine.zip failed the 7-Zip integrity test."
+}
+
+$EngineEntries = & 7z l -slt "python-engine.zip"
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to inspect python-engine.zip."
+}
+foreach ($RequiredEntry in @("Path = kiosk_python.exe", "Path = python311._pth")) {
+    if ($EngineEntries -notcontains $RequiredEntry) {
+        throw "python-engine.zip is missing required root entry: $RequiredEntry"
+    }
+}
+Write-Host "Engine package verified: kiosk_python.exe and python311._pth are present."
 
 Write-Host "Packaging STT assets..."
 if ($SkipSttPackage) {
