@@ -30,7 +30,8 @@ if ($LASTEXITCODE -ne 0) { throw "Draft release upload failed. Any partial uploa
 
 $releaseListJson = & gh api "repos/$Repository/releases?per_page=100"
 if ($LASTEXITCODE -ne 0) { throw "Unable to verify draft release $Tag." }
-$release = @(($releaseListJson -join "`n") | ConvertFrom-Json | Where-Object { $_.tag_name -eq $Tag }) | Select-Object -First 1
+$allReleases = ($releaseListJson -join "`n") | ConvertFrom-Json
+$release = @($allReleases | Where-Object { $_.tag_name -eq $Tag }) | Select-Object -First 1
 if (-not $release -or -not $release.draft) { throw "Draft release $Tag was not found after upload." }
 $uploaded = @{}
 foreach ($asset in @($release.assets)) { $uploaded[[string]$asset.name] = $asset }
