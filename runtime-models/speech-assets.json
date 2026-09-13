@@ -1,0 +1,131 @@
+{
+  "tts": {
+    "piperVoiceRepo": "rhasspy/piper-voices",
+    "piperFiles": [
+      "vi/vi_VN/vivos/x_low/vi_VN-vivos-x_low.onnx",
+      "vi/vi_VN/vivos/x_low/vi_VN-vivos-x_low.onnx.json",
+      "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx",
+      "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json",
+      "fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx",
+      "fr/fr_FR/upmc/medium/fr_FR-upmc-medium.onnx.json"
+    ],
+    "sherpaRepo": "willwade/mms-tts-multilingual-models-onnx",
+    "sherpaModelDir": "vits-mms-tgl",
+    "sherpaFiles": [
+      "tgl/tokens.txt",
+      "tgl/model.onnx"
+    ],
+    "huggingFaceRepos": [
+      {
+        "key": "ttsBertBaseUncased",
+        "repo_id": "bert-base-uncased",
+        "zipFile": "tts-hf-bert-base-uncased.zip",
+        "versionField": "ttsBertBaseUncasedVersion",
+        "cacheDirs": [
+          "models--google-bert--bert-base-uncased",
+          "models--bert-base-uncased"
+        ],
+        "allow_patterns": [
+          "config.json",
+          "tokenizer.json",
+          "tokenizer_config.json",
+          "vocab.txt",
+          "special_tokens_map.json",
+          "pytorch_model.bin"
+        ]
+      },
+      {
+        "key": "ttsBertBaseMultilingual",
+        "repo_id": "bert-base-multilingual-uncased",
+        "zipFile": "tts-hf-bert-base-multilingual-uncased.zip",
+        "versionField": "ttsBertBaseMultilingualVersion",
+        "cacheDirs": [
+          "models--google-bert--bert-base-multilingual-uncased",
+          "models--bert-base-multilingual-uncased"
+        ],
+        "allow_patterns": [
+          "config.json",
+          "tokenizer.json",
+          "tokenizer_config.json",
+          "vocab.txt",
+          "special_tokens_map.json",
+          "pytorch_model.bin"
+        ]
+      },
+      {
+        "key": "ttsBertBaseJapanese",
+        "repo_id": "tohoku-nlp/bert-base-japanese-v3",
+        "zipFile": "tts-hf-bert-base-japanese-v3.zip",
+        "versionField": "ttsBertBaseJapaneseVersion",
+        "cacheDirs": [
+          "models--tohoku-nlp--bert-base-japanese-v3"
+        ],
+        "allow_patterns": [
+          "config.json",
+          "tokenizer.json",
+          "tokenizer_config.json",
+          "vocab.txt",
+          "special_tokens_map.json",
+          "pytorch_model.bin"
+        ]
+      },
+      {
+        "key": "ttsBertKorBase",
+        "repo_id": "kykim/bert-kor-base",
+        "zipFile": "tts-hf-bert-kor-base.zip",
+        "versionField": "ttsBertKorBaseVersion",
+        "cacheDirs": [
+          "models--kykim--bert-kor-base"
+        ],
+        "allow_patterns": [
+          "config.json",
+          "tokenizer.json",
+          "tokenizer_config.json",
+          "vocab.txt",
+          "special_tokens_map.json",
+          "pytorch_model.bin"
+        ]
+      },
+      {
+        "key": "ttsMeloKo",
+        "repo_id": "myshell-ai/MeloTTS-Korean",
+        "zipFile": "tts-hf-melo-ko.zip",
+        "versionField": "ttsMeloKoVersion",
+        "cacheDirs": [
+          "models--myshell-ai--MeloTTS-Korean"
+        ]
+      },
+      {
+        "key": "ttsMeloEn",
+        "repo_id": "myshell-ai/MeloTTS-English",
+        "zipFile": "tts-hf-melo-en.zip",
+        "versionField": "ttsMeloEnVersion",
+        "cacheDirs": [
+          "models--myshell-ai--MeloTTS-English"
+        ]
+      },
+      {
+        "key": "ttsMeloJa",
+        "repo_id": "myshell-ai/MeloTTS-Japanese",
+        "zipFile": "tts-hf-melo-ja.zip",
+        "versionField": "ttsMeloJaVersion",
+        "cacheDirs": [
+          "models--myshell-ai--MeloTTS-Japanese"
+        ]
+      },
+      {
+        "key": "ttsMeloZh",
+        "repo_id": "myshell-ai/MeloTTS-Chinese",
+        "zipFile": "tts-hf-melo-zh.zip",
+        "versionField": "ttsMeloZhVersion",
+        "cacheDirs": [
+          "models--myshell-ai--MeloTTS-Chinese"
+        ]
+      }
+    ],
+    "nltkResources": [
+      "averaged_perceptron_tagger_eng",
+      "cmudict"
+    ]
+  }
+}
