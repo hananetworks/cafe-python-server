@@ -28,5 +28,5 @@ The delivered mini-PC evidence is Python 3.11.9 with HailoRT/SDK/firmware 5.3.0.
 Hailo wheel or driver combination must be tested on the target mini-PC before release. CPU
 fallback and touch ordering remain available when Hailo preparation fails.
 
-The first runtime release consumed by the kiosk is `env-v1.4.35`. The kiosk version and this
+The current runtime release consumed by the kiosk is `env-v1.4.36`. The kiosk version and this
 tag must stay aligned so an older locally cached runtime cannot satisfy the new VoiceOrder boot.

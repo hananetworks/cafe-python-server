@@ -1,6 +1,6 @@
 # cafe-python-server
 
-Current Guided VoiceOrder runtime tag: `env-v1.4.35`.
+Current Guided VoiceOrder runtime tag: `env-v1.4.36`.
 
 키오스크 런타임용 Python 환경과 런타임 자산을 빌드하고 GitHub Release로 배포하는 저장소입니다.
 
