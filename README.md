@@ -1,6 +1,6 @@
 # cafe-python-server
 
-Current Guided VoiceOrder runtime tag: `env-v1.4.36`.
+Current Guided VoiceOrder runtime tag: `env-v1.4.37`.
 
 키오스크 런타임용 Python 환경과 런타임 자산을 빌드하고 GitHub Release로 배포하는 저장소입니다.
 
@@ -12,6 +12,9 @@ Current Guided VoiceOrder runtime tag: `env-v1.4.36`.
 - `tts-hf-*.zip`
 - `hailo-addon.zip`
 - `runtime-manifest.json`
+
+`env-v1.4.36` 이후 릴리즈는 패키지별 source/recipe fingerprint를 비교합니다. 내용이 같은
+패키지는 이전 릴리즈 ZIP을 다시 압축하지 않고 그대로 복사하므로 SHA-256도 유지됩니다.
 
 ## 기본 원칙
 
@@ -58,6 +61,11 @@ Current Guided VoiceOrder runtime tag: `env-v1.4.36`.
 현재 전달 패키지에서 검증된 Hailo 조합은 Windows Python 3.11.9 + HailoRT 5.3.0입니다.
 저장소의 Hailo wheel 버전이 다르면 실제 미니PC에서 별도 호환 검증이 필요합니다.
 
+HailoRT wheel은 `hailo-addon.zip/site-packages`에 포함됩니다. Python engine의
+`python311._pth`는 `../hailo/site-packages`를 참조하므로 이후 HailoRT wheel 변경은
+engine이 아니라 Hailo addon만 갱신합니다. 이 분리 구조로 전환하는 최초 릴리즈에서는
+engine과 Hailo addon이 한 번 함께 변경됩니다.
+
 ### 3. TTS 실물 모델로 운영할 때
 
 - 위치:
@@ -78,12 +86,16 @@ Current Guided VoiceOrder runtime tag: `env-v1.4.36`.
 
 ### `main` 먼저 푸시한 뒤 태그
 
-아래 파일이 바뀌면 엔진 캐시에 영향이 있으므로 `main`을 먼저 올리는 게 좋습니다.
+아래 파일이 바뀌면 engine source/recipe fingerprint에 영향이 있으므로 `main`을 먼저 올리는 게 좋습니다.
 
 - `requirements.txt`
-- `libs/*.whl`
 - `scripts/build-python-env.ps1`
-- `scripts/package-split-runtime.ps1`
+- `scripts/package-engine.ps1`
+
+`libs/hailort-*.whl`은 Hailo addon에만 영향을 줍니다. STT/TTS/Hailo 패키징 스크립트도
+각자 담당하는 패키지 fingerprint에만 영향을 줍니다.
+공통 archive helper의 출력 규칙을 바꾸는 경우에는 영향을 받는 패키지별 스크립트도 같은
+커밋에서 갱신하여 해당 recipe fingerprint만 변경해야 합니다.
 
 권장 순서:
 
@@ -116,3 +128,5 @@ Current Guided VoiceOrder runtime tag: `env-v1.4.36`.
 - TTS는 지금 당장은 기존 fallback 유지 가능
 - 엔진에 영향이 있으면 `main` 먼저
 - 최종 배포는 항상 태그
+- 릴리즈 전에 `scripts/resolve-runtime-package-plan.ps1`로 `REUSE`/`REBUILD` 결과 확인
+- 기존 릴리즈는 덮어쓰지 않으며, 검증된 draft만 공개 릴리즈로 전환

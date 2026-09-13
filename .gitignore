@@ -11,3 +11,6 @@ out/
 hash.txt
 runtime-manifest.json
 runtime-manifest.json.sha256
+runtime-package-plan.json
+.runtime-work/
+.runtime-test/
