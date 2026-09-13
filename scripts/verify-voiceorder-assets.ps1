@@ -29,9 +29,9 @@ $HailoWheels = @(Get-ChildItem -LiteralPath (Join-Path $RepoRoot "libs") -File -
 if ($HailoWheels.Count -ne 1) {
     throw "Exactly one HailoRT wheel is required in libs/."
 }
-if ($HailoWheels[0].Name -notmatch '^hailort-5\.3\.0-') {
-    Write-Warning (
-        "The delivered device evidence is HailoRT/SDK/Firmware 5.3.0, but the repository wheel is " +
-        "$($HailoWheels[0].Name). Hailo primary requires target-device compatibility verification."
+if ($HailoWheels[0].Name -ne 'hailort-5.3.0-cp311-cp311-win_amd64.whl') {
+    throw (
+        "The runtime requires the Windows Python 3.11 HailoRT 5.3.0 wheel, but found " +
+        "$($HailoWheels[0].Name)."
     )
 }
