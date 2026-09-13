@@ -10,8 +10,10 @@ if ([string]::IsNullOrWhiteSpace($Repository)) { throw "Repository is required."
 
 & (Join-Path $PSScriptRoot "verify-runtime-artifacts.ps1") -ManifestPath (Join-Path $ArtifactDirectory "runtime-manifest.json") -AssetDirectory $ArtifactDirectory
 
-& gh release view $Tag --repo $Repository *> $null
-if ($LASTEXITCODE -eq 0) {
+$existingReleaseJson = & gh api "repos/$Repository/releases?per_page=100"
+if ($LASTEXITCODE -ne 0) { throw "Unable to inspect existing releases for $Repository." }
+$existingReleases = ($existingReleaseJson -join "`n") | ConvertFrom-Json
+if (@($existingReleases | Where-Object { $_.tag_name -eq $Tag }).Count -gt 0) {
     throw "Release $Tag already exists; existing releases are never overwritten."
 }
 
