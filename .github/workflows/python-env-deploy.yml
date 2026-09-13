@@ -1,4 +1,4 @@
-name: Deploy Python Environment (Diff Patch)
+name: Deploy Python Environment (Content Addressed)
 
 on:
   push:
@@ -15,164 +15,141 @@ jobs:
       contents: write
     env:
       ARTIFACT_DIR: out
+      GITHUB_TOKEN: ${{ github.token }}
+      PIP_CACHE_DIR: ${{ runner.temp }}\pip-cache
 
     steps:
-      - name: Checkout code
+      - name: Checkout code and LFS assets
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
 
-      - name: Cache STT Asset Package
-        id: cache-stt
+      - name: Test runtime packaging rules
+        shell: powershell
+        run: .\tests\runtime-packaging.tests.ps1
+
+      - name: Cache pip downloads
         uses: actions/cache@v3
         with:
-          path: stt-assets.zip
-          key: ${{ runner.os }}-stt-assets-${{ hashFiles('runtime-models/stt/**', 'scripts/package-split-runtime.ps1', 'scripts/get-runtime-model-layout.ps1') }}
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      - name: Cache Engine Package
+      - name: Verify VoiceOrder source assets
+        shell: powershell
+        run: .\scripts\verify-voiceorder-assets.ps1
+
+      - name: Resolve package reuse plan
+        id: plan
+        shell: powershell
+        run: .\scripts\resolve-runtime-package-plan.ps1
+
+      - name: Cache changed Python engine
+        if: steps.plan.outputs.engine_action == 'rebuild'
         id: cache-engine
         uses: actions/cache@v3
         with:
           path: python-engine.zip
-          key: ${{ runner.os }}-python-engine-${{ hashFiles('requirements.txt', 'libs/*.whl', 'scripts/build-python-env.ps1', 'scripts/package-split-runtime.ps1') }}
+          key: ${{ runner.os }}-runtime-engine-${{ steps.plan.outputs.engine_fingerprint }}
 
-      - name: Cache TTS Asset Packages
+      - name: Cache changed STT package
+        if: steps.plan.outputs.stt_action == 'rebuild'
+        id: cache-stt
+        uses: actions/cache@v3
+        with:
+          path: stt-assets.zip
+          key: ${{ runner.os }}-runtime-stt-${{ steps.plan.outputs.stt_fingerprint }}
+
+      - name: Cache changed TTS packages
+        if: steps.plan.outputs.tts_rebuild == 'true'
         id: cache-tts
         uses: actions/cache@v3
         with:
           path: |
             tts-core-assets.zip
             tts-hf-*.zip
-          key: ${{ runner.os }}-tts-assets-${{ hashFiles('scripts/prepare-speech-assets.ps1', 'scripts/package-split-runtime.ps1', 'scripts/get-runtime-model-layout.ps1', 'runtime-models/tts/**', 'runtime-models/speech-assets.json') }}
+          key: ${{ runner.os }}-runtime-tts-changed-${{ steps.plan.outputs.tts_rebuild_fingerprint }}
 
-      - name: Cache Hailo Asset Package
+      - name: Cache changed Hailo addon
+        if: steps.plan.outputs.hailo_action == 'rebuild'
         id: cache-hailo
         uses: actions/cache@v3
         with:
           path: hailo-addon.zip
-          key: ${{ runner.os }}-hailo-assets-${{ hashFiles('runtime-models/hailo/**', 'scripts/package-hailo-addon.ps1', 'scripts/get-runtime-model-layout.ps1') }}
+          key: ${{ runner.os }}-runtime-hailo-${{ steps.plan.outputs.hailo_fingerprint }}
 
-      - name: Cache Pip Packages
-        uses: actions/cache@v3
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Verify VoiceOrder Assets
-        shell: powershell
-        run: .\scripts\verify-voiceorder-assets.ps1
-
-      - name: Resolve Reuse Flags
-        id: reuse-flags
+      - name: Restore engine environment needed by a TTS rebuild
+        if: steps.plan.outputs.tts_rebuild == 'true' && steps.cache-tts.outputs.cache-hit != 'true' && (steps.plan.outputs.engine_action == 'reuse' || steps.cache-engine.outputs.cache-hit == 'true')
         shell: powershell
         run: |
-          . .\scripts\get-runtime-model-layout.ps1
-          $layout = Get-RuntimeModelLayout -RepoRoot (Get-Location)
-          $canReuseEngine = ("${{ steps.cache-engine.outputs.cache-hit }}" -eq "true") -and (Test-Path "python-engine.zip")
-          $canReuseStt = ("${{ steps.cache-stt.outputs.cache-hit }}" -eq "true") -and (Test-Path "stt-assets.zip")
-          $ttsPackageFiles = Get-ExpectedTtsAssetFiles -Layout $layout
-          $canReuseTts = ("${{ steps.cache-tts.outputs.cache-hit }}" -eq "true") -and (($ttsPackageFiles | Where-Object { -not (Test-Path $_) }).Count -eq 0)
+          if ('${{ steps.plan.outputs.engine_action }}' -eq 'reuse') {
+            .\scripts\reuse-runtime-assets.ps1 -Components engine
+          }
+          if (Test-Path python-env) { Remove-Item python-env -Recurse -Force }
+          7z x python-engine.zip -opython-env -y
+          if ($LASTEXITCODE -ne 0) { throw "Unable to extract reused Python engine." }
 
-          $skipBuild = $canReuseEngine -and $canReuseTts
-          $skipRuntimePackage = $canReuseEngine -and $canReuseStt -and $canReuseTts
+      - name: Build Python engine
+        if: steps.plan.outputs.engine_action == 'rebuild' && steps.cache-engine.outputs.cache-hit != 'true'
+        shell: powershell
+        run: .\scripts\build-python-env.ps1
 
-          "skip_build=$($skipBuild.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "skip_runtime_package=$($skipRuntimePackage.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      - name: Package Python engine
+        if: steps.plan.outputs.engine_action == 'rebuild' && steps.cache-engine.outputs.cache-hit != 'true'
+        shell: powershell
+        run: .\scripts\package-engine.ps1
 
-      # 2. Build Python Environment
-      - name: Build Pure Isolated Python
-        if: steps.reuse-flags.outputs.skip_build != 'true'
+      - name: Package STT assets
+        if: steps.plan.outputs.stt_action == 'rebuild' && steps.cache-stt.outputs.cache-hit != 'true'
+        shell: powershell
+        run: .\scripts\package-stt-assets.ps1
+
+      - name: Prepare and package changed TTS components
+        if: steps.plan.outputs.tts_rebuild == 'true' && steps.cache-tts.outputs.cache-hit != 'true'
         shell: powershell
         run: |
-          . .\scripts\get-runtime-model-layout.ps1
-          $layout = Get-RuntimeModelLayout -RepoRoot (Get-Location)
-          $buildArgs = @()
-          $ttsPackageFiles = Get-ExpectedTtsAssetFiles -Layout $layout
-          if (("${{ steps.cache-engine.outputs.cache-hit }}" -eq "true") -and (Test-Path "python-engine.zip")) {
-            $buildArgs += "-ReuseEngineZip"; $buildArgs += "python-engine.zip"
-          }
-          if (("${{ steps.cache-stt.outputs.cache-hit }}" -eq "true") -and (Test-Path "stt-assets.zip")) {
-            $buildArgs += "-ReuseSttAssetZip"; $buildArgs += "stt-assets.zip"
-          }
-          if (("${{ steps.cache-tts.outputs.cache-hit }}" -eq "true") -and (($ttsPackageFiles | Where-Object { -not (Test-Path $_) }).Count -eq 0)) {
-            $buildArgs += "-ReuseTtsCoreAssetZip"; $buildArgs += "tts-core-assets.zip"
-          }
-          .\scripts\build-python-env.ps1 @buildArgs
+          $plan = Get-Content runtime-package-plan.json -Raw -Encoding utf8 | ConvertFrom-Json
+          $components = @($plan.packages | Where-Object {
+            $_.action -eq 'rebuild' -and ($_.component -eq 'ttsCore' -or $_.component -like 'tts*')
+          } | ForEach-Object { $_.component })
+          .\scripts\prepare-speech-assets.ps1 -PythonExe .\python-env\kiosk_python.exe -Components $components
+          .\scripts\package-tts-assets.ps1 -Components $components
 
-      # 3. Runtime Packaging
-      - name: Package Split Runtime
-        if: steps.reuse-flags.outputs.skip_runtime_package != 'true'
-        shell: powershell
-        run: |
-          . .\scripts\get-runtime-model-layout.ps1
-          $layout = Get-RuntimeModelLayout -RepoRoot (Get-Location)
-          $packageArgs = @()
-          if ("${{ steps.cache-engine.outputs.cache-hit }}" -eq "true" -and (Test-Path "python-engine.zip")) {
-            $packageArgs += "-SkipEnginePackage"
-          }
-          if ("${{ steps.cache-stt.outputs.cache-hit }}" -eq "true" -and (Test-Path "stt-assets.zip")) {
-            $packageArgs += "-SkipSttPackage"
-          }
-          $ttsPackageFiles = Get-ExpectedTtsAssetFiles -Layout $layout
-          if ("${{ steps.cache-tts.outputs.cache-hit }}" -eq "true" -and (($ttsPackageFiles | Where-Object { -not (Test-Path $_) }).Count -eq 0)) {
-            $packageArgs += "-SkipTtsPackage"
-          }
-          .\scripts\package-split-runtime.ps1 @packageArgs
-
-      - name: Zip Hailo Addon Package
-        if: steps.cache-hailo.outputs.cache-hit != 'true'
+      - name: Package Hailo addon
+        if: steps.plan.outputs.hailo_action == 'rebuild' && steps.cache-hailo.outputs.cache-hit != 'true'
         shell: powershell
         run: .\scripts\package-hailo-addon.ps1
 
-      # 4. Upload
-      - name: Generate Runtime Artifacts
+      - name: Reuse unchanged assets from the previous release
         if: startsWith(github.ref, 'refs/tags/env-v')
         shell: powershell
-        run: .\scripts\generate-runtime-artifacts.ps1
+        run: .\scripts\reuse-runtime-assets.ps1
 
-      - name: Collect Release Artifacts
+      - name: Generate and verify runtime manifest
+        if: startsWith(github.ref, 'refs/tags/env-v')
+        shell: powershell
+        run: |
+          .\scripts\generate-runtime-artifacts.ps1
+          .\scripts\verify-runtime-artifacts.ps1 -PlanPath runtime-package-plan.json
+
+      - name: Collect release artifacts
         if: startsWith(github.ref, 'refs/tags/env-v')
         shell: powershell
         run: |
           if (Test-Path $env:ARTIFACT_DIR) { Remove-Item $env:ARTIFACT_DIR -Recurse -Force }
           New-Item -ItemType Directory -Path $env:ARTIFACT_DIR -Force | Out-Null
-
-          $artifactFiles = @(
-            "python-engine.zip",
-            "stt-assets.zip",
-            "tts-core-assets.zip",
-            "hailo-addon.zip",
-            "runtime-manifest.json",
-            "runtime-manifest.json.sha256",
-            "hash.txt"
-          )
-
-          foreach ($artifact in $artifactFiles) {
-            if (Test-Path $artifact) {
-              Copy-Item -Path $artifact -Destination $env:ARTIFACT_DIR -Force
-            }
+          $manifest = Get-Content runtime-manifest.json -Raw -Encoding utf8 | ConvertFrom-Json
+          foreach ($package in $manifest.packages.PSObject.Properties.Value) {
+            Copy-Item -LiteralPath $package.asset -Destination $env:ARTIFACT_DIR
           }
-
-          Get-ChildItem -Path . -File -Filter "tts-hf-*.zip" | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination $env:ARTIFACT_DIR -Force
+          foreach ($metadata in @('runtime-manifest.json', 'runtime-manifest.json.sha256', 'hash.txt')) {
+            Copy-Item -LiteralPath $metadata -Destination $env:ARTIFACT_DIR
           }
+          .\scripts\verify-runtime-artifacts.ps1 -ManifestPath "$env:ARTIFACT_DIR\runtime-manifest.json" -AssetDirectory $env:ARTIFACT_DIR
 
-      - name: Upload to Release
+      - name: Publish verified draft release
         if: startsWith(github.ref, 'refs/tags/env-v')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            out/python-engine.zip
-            out/stt-assets.zip
-            out/tts-core-assets.zip
-            out/tts-hf-*.zip
-            out/hailo-addon.zip
-            out/runtime-manifest.json
-            out/runtime-manifest.json.sha256
-            out/hash.txt
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: powershell
+        run: .\scripts\publish-runtime-release.ps1 -Tag $env:GITHUB_REF_NAME -ArtifactDirectory $env:ARTIFACT_DIR

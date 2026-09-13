@@ -1,92 +1,78 @@
-$ErrorActionPreference = "Stop"
-
-. (Join-Path $PSScriptRoot "get-runtime-model-layout.ps1")
-
-function Get-RequiredHash {
-    param([string]$Path)
-
-    return (Get-FileHash $Path -Algorithm SHA256).Hash
-}
-
-$releaseVersion = $env:GITHUB_REF_NAME
-if ([string]::IsNullOrWhiteSpace($releaseVersion)) { $releaseVersion = "env-dev" }
-
-$ttsPackages = @(
-    @{ Key = "ttsCore"; File = "tts-core-assets.zip"; Required = $true; ExtractTo = "python/tts/core"; VersionField = "ttsCoreVersion" }
+param(
+    [string]$PlanPath = "runtime-package-plan.json",
+    [string]$OutputDirectory = "."
 )
 
-foreach ($hfZip in @(Get-ChildItem -Path $PWD -File -Filter "tts-hf-*.zip" | Sort-Object Name)) {
-    $key = Convert-TtsPackageNameToKey -Name $hfZip.Name
-    $ttsPackages += @{
-        Key = $key
-        File = $hfZip.Name
-        Required = $false
-        ExtractTo = "python/tts/hf/hub"
-        VersionField = "$($key)Version"
+$ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "runtime-package-common.ps1")
+
+$plan = Get-Content -LiteralPath $PlanPath -Raw -Encoding utf8 | ConvertFrom-Json
+$releaseVersion = if ($env:GITHUB_REF_NAME -and $env:GITHUB_REF_NAME -like "env-v*") { $env:GITHUB_REF_NAME } else { [string]$plan.releaseVersion }
+if ([string]::IsNullOrWhiteSpace($releaseVersion)) { $releaseVersion = "env-dev" }
+
+$packageMap = [ordered]@{}
+$hashLines = @()
+foreach ($planned in @($plan.packages)) {
+    $assetPath = Join-Path $OutputDirectory ([string]$planned.file)
+    $hash = Get-RequiredFileHash -Path $assetPath
+    $size = (Get-Item -LiteralPath $assetPath).Length
+
+    if ($planned.action -eq "reuse") {
+        if ($hash -ne [string]$planned.baseSha256) {
+            throw "$($planned.file) was marked for reuse but its SHA256 changed."
+        }
+        if ($size -ne [int64]$planned.baseSize) {
+            throw "$($planned.file) was marked for reuse but its size changed."
+        }
     }
-}
 
-$hashEngine = Get-RequiredHash "python-engine.zip"
-$hashStt = Get-RequiredHash "stt-assets.zip"
-$hashTtsCore = Get-RequiredHash "tts-core-assets.zip"
-$hashHailo = Get-RequiredHash "hailo-addon.zip"
-$ttsPackages = foreach ($ttsPackage in $ttsPackages) {
-    $package = $ttsPackage.Clone()
-    if ($package.Key -eq "ttsCore") {
-        $package.Hash = $hashTtsCore
+    $componentVersion = if ($planned.action -eq "reuse") { [string]$planned.version } else { $releaseVersion }
+    $packageMap[[string]$planned.component] = [ordered]@{
+        component = [string]$planned.component
+        required = [bool]$planned.required
+        version = $componentVersion
+        sourceFingerprint = [string]$planned.sourceFingerprint
+        recipeFingerprint = [string]$planned.recipeFingerprint
+        packageFingerprint = [string]$planned.packageFingerprint
+        archiveSha256 = $hash
+        sha256 = $hash
+        size = [int64]$size
+        asset = [string]$planned.file
+        file = [string]$planned.file
+        extractTo = [string]$planned.extractTo
     }
-    $package
+    $hashLines += "$($planned.component): $hash  $size  $($planned.file)"
 }
 
-@(
-    "Engine: $hashEngine"
-    "STT: $hashStt"
-    "TTS-CORE: $hashTtsCore"
-    "HAILO: $hashHailo"
-) | Set-Content -Encoding Ascii hash.txt
-
-$packageMap = [ordered]@{
-    engine = @{ required = $true; version = $releaseVersion; file = "python-engine.zip"; sha256 = $hashEngine; extractTo = "python/engine" }
-    stt    = @{ required = $true; version = $releaseVersion; file = "stt-assets.zip"; sha256 = $hashStt; extractTo = "python/stt" }
-    hailo  = @{ required = $false; version = $releaseVersion; file = "hailo-addon.zip"; sha256 = $hashHailo; extractTo = "python/hailo" }
+function Get-PackageVersion([string]$Component) {
+    if ($packageMap.Contains($Component)) { return [string]$packageMap[$Component].version }
+    return $null
 }
 
+$ttsPackages = @($plan.packages | Where-Object { $_.component -eq "ttsCore" -or $_.component -like "tts*" })
+$ttsChanged = @($ttsPackages | Where-Object { $_.action -eq "rebuild" }).Count -gt 0
 $manifest = [ordered]@{
-    manifestVersion = 1
-    engineVersion = $releaseVersion
-    sttVersion = $releaseVersion
-    ttsVersion = $releaseVersion
-    ttsCoreVersion = $releaseVersion
-    hailoVersion = $releaseVersion
+    manifestVersion = 2
+    sourceFingerprintAlgorithm = [string]$plan.sourceFingerprintAlgorithm
+    releaseVersion = $releaseVersion
+    baseRelease = [string]$plan.baseRelease
+    engineVersion = Get-PackageVersion "engine"
+    sttVersion = Get-PackageVersion "stt"
+    ttsVersion = if ($ttsChanged) { $releaseVersion } elseif ($plan.baseTtsVersion) { [string]$plan.baseTtsVersion } else { Get-PackageVersion "ttsCore" }
+    ttsCoreVersion = Get-PackageVersion "ttsCore"
+    hailoVersion = Get-PackageVersion "hailo"
     packages = $packageMap
 }
 
-foreach ($ttsPackage in $ttsPackages) {
-    if (Test-Path $ttsPackage.File) {
-        if (-not $ttsPackage.Hash) {
-            $ttsPackage.Hash = Get-RequiredHash $ttsPackage.File
-        }
-        "$($ttsPackage.Key): $($ttsPackage.Hash)" | Add-Content -Encoding Ascii hash.txt
-        $packageMap[$ttsPackage.Key] = @{
-            required = $ttsPackage.Required
-            version = $releaseVersion
-            file = $ttsPackage.File
-            sha256 = $ttsPackage.Hash
-            extractTo = $ttsPackage.ExtractTo
-        }
-        $manifest[$ttsPackage.VersionField] = $releaseVersion
-    }
+foreach ($component in @($packageMap.Keys | Where-Object { $_ -like "tts*" -and $_ -ne "ttsCore" })) {
+    $manifest["${component}Version"] = [string]$packageMap[$component].version
 }
 
-$manifestJson = $manifest | ConvertTo-Json -Depth 5
-[System.IO.File]::WriteAllText(
-    (Join-Path $PWD "runtime-manifest.json"),
-    $manifestJson,
-    [System.Text.UTF8Encoding]::new($false)
-)
+$manifestPath = Join-Path $OutputDirectory "runtime-manifest.json"
+$manifestJson = $manifest | ConvertTo-Json -Depth 8
+Write-Utf8NoBom -Path $manifestPath -Content $manifestJson
+$manifestHash = Get-RequiredFileHash -Path $manifestPath
+"$manifestHash  runtime-manifest.json" | Set-Content -LiteralPath (Join-Path $OutputDirectory "runtime-manifest.json.sha256") -Encoding Ascii
+$hashLines | Set-Content -LiteralPath (Join-Path $OutputDirectory "hash.txt") -Encoding Ascii
 
-$manifestPath = Join-Path $PWD "runtime-manifest.json"
-$manifestSha256Path = Join-Path $PWD "runtime-manifest.json.sha256"
-$manifestHash = Get-RequiredHash $manifestPath
-
-"$manifestHash  runtime-manifest.json" | Set-Content -Path $manifestSha256Path -Encoding Ascii
+Write-Host "Generated manifest v2 for $releaseVersion."
