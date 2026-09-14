@@ -6,11 +6,11 @@
     "pythonVersion": "3.11",
     "platform": "win_amd64",
     "distribution": "opencv-python-headless",
-    "version": "4.11.0.86",
-    "wheel": "opencv_python_headless-4.11.0.86-cp37-abi3-win_amd64.whl",
-    "wheelSha256": "6C304DF9CAA7A6A5710B91709DD4786BF20A74D57672B3C31F7033CC638174CA",
+    "version": "4.13.0.92",
+    "wheel": "opencv_python_headless-4.13.0.92-cp37-abi3-win_amd64.whl",
+    "wheelSha256": "77A82FE35DDCEC0F62C15F2BA8A12ECC2ED4207C17B0902C7A3151AE29F37FB6",
     "importPath": "site-packages/cv2/__init__.py",
-    "distInfoPath": "site-packages/opencv_python_headless-4.11.0.86.dist-info"
+    "distInfoPath": "site-packages/opencv_python_headless-4.13.0.92.dist-info"
   },
   "models": {
     "person": { "file": "models/person/yolov8n.hef", "sha256": "557F080AFE1DFB9CEF02CFEA81EFC42BA33B8093E9E51CBAFD9AAE717A7D90E7", "bytes": 7032832, "input": "640x640 RGB UINT8", "output": "HAILO_NMS_BY_CLASS" },

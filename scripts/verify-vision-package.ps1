@@ -85,7 +85,7 @@ import numpy
 module_path = pathlib.Path(cv2.__file__).resolve()
 if site_packages not in module_path.parents:
     raise RuntimeError(f"OpenCV loaded outside Vision package: {module_path}")
-if cv2.__version__ != "4.11.0":
+if cv2.__version__ != "4.13.0":
     raise RuntimeError(f"Unexpected OpenCV version: {cv2.__version__}")
 if numpy.__version__ != "1.26.4":
     raise RuntimeError(f"Unexpected packaged-engine NumPy version: {numpy.__version__}")

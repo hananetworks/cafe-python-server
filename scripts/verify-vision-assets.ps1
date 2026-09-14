@@ -24,11 +24,11 @@ $PythonRuntime = $Manifest.pythonRuntime
 if ([string]$PythonRuntime.pythonVersion -ne "3.11" -or
     [string]$PythonRuntime.platform -ne "win_amd64" -or
     [string]$PythonRuntime.distribution -ne "opencv-python-headless" -or
-    [string]$PythonRuntime.version -ne "4.11.0.86" -or
-    [string]$PythonRuntime.wheel -ne "opencv_python_headless-4.11.0.86-cp37-abi3-win_amd64.whl" -or
-    [string]$PythonRuntime.wheelSha256 -ne "6C304DF9CAA7A6A5710B91709DD4786BF20A74D57672B3C31F7033CC638174CA" -or
+    [string]$PythonRuntime.version -ne "4.13.0.92" -or
+    [string]$PythonRuntime.wheel -ne "opencv_python_headless-4.13.0.92-cp37-abi3-win_amd64.whl" -or
+    [string]$PythonRuntime.wheelSha256 -ne "77A82FE35DDCEC0F62C15F2BA8A12ECC2ED4207C17B0902C7A3151AE29F37FB6" -or
     [string]$PythonRuntime.importPath -ne "site-packages/cv2/__init__.py" -or
-    [string]$PythonRuntime.distInfoPath -ne "site-packages/opencv_python_headless-4.11.0.86.dist-info") {
+    [string]$PythonRuntime.distInfoPath -ne "site-packages/opencv_python_headless-4.13.0.92.dist-info") {
     throw "Vision OpenCV runtime contract mismatch."
 }
 if ([int]$Manifest.runtimeContract.processOwners -ne 1 -or [int]$Manifest.runtimeContract.vdeviceOwners -ne 1) {

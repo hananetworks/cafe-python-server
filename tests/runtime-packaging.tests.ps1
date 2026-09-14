@@ -45,7 +45,7 @@ try {
     Assert-Equal "3.11" $visionContract.pythonRuntime.pythonVersion "Vision OpenCV must target CPython 3.11"
     Assert-Equal "win_amd64" $visionContract.pythonRuntime.platform "Vision OpenCV must target 64-bit Windows"
     Assert-Equal "opencv-python-headless" $visionContract.pythonRuntime.distribution "Vision must use headless OpenCV"
-    Assert-Equal "4.11.0.86" $visionContract.pythonRuntime.version "Vision OpenCV must be pinned"
+    Assert-Equal "4.13.0.92" $visionContract.pythonRuntime.version "Vision OpenCV must be pinned to the validated camera runtime"
     Assert-Equal "site-packages/cv2/__init__.py" $visionContract.pythonRuntime.importPath "Vision OpenCV must use the kiosk activation path"
     Assert-Equal 64 ([string]$visionContract.pythonRuntime.wheelSha256).Length "Vision OpenCV wheel must have a pinned SHA256"
 
