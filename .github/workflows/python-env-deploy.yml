@@ -30,6 +30,10 @@ jobs:
         with:
           python-version: '3.11.9'
 
+      - name: Match packaged engine NumPy for Vision validation
+        shell: powershell
+        run: python -m pip install --disable-pip-version-check numpy==1.26.4
+
       - name: Test runtime packaging rules
         shell: powershell
         run: .\tests\runtime-packaging.tests.ps1

@@ -80,21 +80,32 @@ import sys
 site_packages = pathlib.Path(os.environ["CAFE_VISION_SITE_PACKAGES"]).resolve()
 sys.path.insert(0, str(site_packages))
 import cv2
+import numpy
 
 module_path = pathlib.Path(cv2.__file__).resolve()
 if site_packages not in module_path.parents:
     raise RuntimeError(f"OpenCV loaded outside Vision package: {module_path}")
 if cv2.__version__ != "4.11.0":
     raise RuntimeError(f"Unexpected OpenCV version: {cv2.__version__}")
+if numpy.__version__ != "1.26.4":
+    raise RuntimeError(f"Unexpected packaged-engine NumPy version: {numpy.__version__}")
 if not callable(cv2.VideoCapture):
     raise RuntimeError("cv2.VideoCapture is unavailable")
 print(f"OpenCV {cv2.__version__}: {module_path}")
+print(f"NumPy {numpy.__version__}: OK")
 print("cv2.VideoCapture: OK")
 '@
         $ProbePath = Join-Path $TestRoot "verify_cv2_runtime.py"
         Write-Utf8NoBom -Path $ProbePath -Content $Probe
-        $ProbeOutput = & $PythonExe $ProbePath 2>&1
-        if ($LASTEXITCODE -ne 0) { throw "Packaged OpenCV import probe failed:`n$($ProbeOutput -join "`n")" }
+        $PreviousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            $ProbeOutput = @(& $PythonExe $ProbePath 2>&1 | ForEach-Object { "$_" })
+            $ProbeExitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $PreviousErrorActionPreference
+        }
+        if ($ProbeExitCode -ne 0) { throw "Packaged OpenCV import probe failed:`n$($ProbeOutput -join "`n")" }
         $ProbeOutput | Write-Host
     } finally {
         $env:CAFE_VISION_SITE_PACKAGES = $PreviousSitePackages
