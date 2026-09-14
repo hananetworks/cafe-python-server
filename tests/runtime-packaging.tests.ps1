@@ -38,6 +38,13 @@ try {
     Assert-Equal "vision-assets.zip" $visionDefinition.file "Vision must use an independent archive"
     Assert-Equal "python/vision" $visionDefinition.extractTo "Vision must install into its own runtime root"
     Assert-Equal $false $visionDefinition.required "Vision assets remain optional for older kiosk deployments"
+    $visionContract = Get-Content -LiteralPath (Join-Path $repoRoot "runtime-models\vision\vision-assets.json") -Raw -Encoding utf8 | ConvertFrom-Json
+    Assert-Equal "3.11" $visionContract.pythonRuntime.pythonVersion "Vision OpenCV must target CPython 3.11"
+    Assert-Equal "win_amd64" $visionContract.pythonRuntime.platform "Vision OpenCV must target 64-bit Windows"
+    Assert-Equal "opencv-python-headless" $visionContract.pythonRuntime.distribution "Vision must use headless OpenCV"
+    Assert-Equal "4.11.0.86" $visionContract.pythonRuntime.version "Vision OpenCV must be pinned"
+    Assert-Equal "site-packages/cv2/__init__.py" $visionContract.pythonRuntime.importPath "Vision OpenCV must use the kiosk activation path"
+    Assert-Equal 64 ([string]$visionContract.pythonRuntime.wheelSha256).Length "Vision OpenCV wheel must have a pinned SHA256"
 
     # A wheel-only Hailo source change must not select STT or any TTS package.
     $base = @{ engine = "engine-a"; stt = "stt-a"; hailo = "hailo-a"; vision = "vision-a"; ttsCore = "core-a"; ttsKo = "ko-a"; ttsEn = "en-a" }

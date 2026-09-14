@@ -200,7 +200,7 @@ function Get-RecipeFingerprint {
         "engine" { @("scripts/build-python-env.ps1", "scripts/package-engine.ps1") }
         "stt" { @("scripts/package-stt-assets.ps1") }
         "hailo" { @("scripts/package-hailo-addon.ps1") }
-        "vision" { @("scripts/package-vision-assets.ps1", "scripts/verify-vision-assets.ps1") }
+        "vision" { @("scripts/package-vision-assets.ps1", "scripts/verify-vision-assets.ps1", "scripts/verify-vision-package.ps1") }
         { $_ -in @("ttsCore", "ttsHfLocal", "ttsHfConfig") } { @("scripts/prepare-speech-assets.ps1", "scripts/package-tts-assets.ps1", "scripts/get-runtime-model-layout.ps1") }
         default { throw "Unknown package kind: $($Definition.kind)" }
     }

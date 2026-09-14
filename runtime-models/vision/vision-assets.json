@@ -2,6 +2,16 @@
   "schemaVersion": 1,
   "source": "cheonan-vision-npu-handoff-20260914",
   "handoffManifestSha256": "925DA813062A52BDF0C55AB2739F027EB32D2FD7D2478058742DD1D869685672",
+  "pythonRuntime": {
+    "pythonVersion": "3.11",
+    "platform": "win_amd64",
+    "distribution": "opencv-python-headless",
+    "version": "4.11.0.86",
+    "wheel": "opencv_python_headless-4.11.0.86-cp37-abi3-win_amd64.whl",
+    "wheelSha256": "6C304DF9CAA7A6A5710B91709DD4786BF20A74D57672B3C31F7033CC638174CA",
+    "importPath": "site-packages/cv2/__init__.py",
+    "distInfoPath": "site-packages/opencv_python_headless-4.11.0.86.dist-info"
+  },
   "models": {
     "person": { "file": "models/person/yolov8n.hef", "sha256": "557F080AFE1DFB9CEF02CFEA81EFC42BA33B8093E9E51CBAFD9AAE717A7D90E7", "bytes": 7032832, "input": "640x640 RGB UINT8", "output": "HAILO_NMS_BY_CLASS" },
     "gender": { "file": "models/gender/yolo26-gender-best.hef", "metadata": "models/gender/metadata.yaml", "sha256": "391E8C93B57B468BDC8449C1B678F8C8B13DB05EE30C3C2469E23A869B607B40", "bytes": 11595776, "decoder": "ultralytics-8.4.138-hailobackend-raw-six-tensor" },

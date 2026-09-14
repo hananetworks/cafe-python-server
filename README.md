@@ -1,6 +1,6 @@
 # cafe-python-server
 
-Current Guided VoiceOrder runtime tag: `env-v1.4.37`.
+Current Guided VoiceOrder runtime tag: `env-v1.4.38`.
 
 키오스크 런타임용 Python 환경과 런타임 자산을 빌드하고 GitHub Release로 배포하는 저장소입니다.
 
@@ -58,7 +58,9 @@ Current Guided VoiceOrder runtime tag: `env-v1.4.37`.
 - 결과: `vision-assets.zip`에만 반영
 - 검증: `scripts/verify-vision-assets.ps1`
 
-Vision 패키지는 Person/Gender/Age HEF와 메타데이터만 배포합니다. HailoRT wheel은 기존
+Vision 패키지는 Person/Gender/Age HEF, 메타데이터, Windows CPython 3.11용
+`opencv-python-headless==4.11.0.86` 전체 wheel 설치 결과를 `site-packages/`에 배포합니다.
+HailoRT wheel은 기존
 `hailo-addon.zip`에 유지되므로 Vision 모델만 바뀌어도 engine/STT/TTS/Hailo addon은
 재다운로드하지 않습니다. 실행 계층은 하나의 프로세스와 하나의 `VDevice`에서 세 Vision
 InferModel과 Whisper STT를 함께 소유해야 하며, 최종 4모델 동시부하는 실장비 검증 전까지

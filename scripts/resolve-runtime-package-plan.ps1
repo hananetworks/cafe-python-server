@@ -91,6 +91,7 @@ Write-GitHubOutput -Name "hailo_action" -Value ([string]$hailo.action)
 Write-GitHubOutput -Name "hailo_fingerprint" -Value ([string]$hailo.packageFingerprint)
 Write-GitHubOutput -Name "vision_action" -Value ([string]$vision.action)
 Write-GitHubOutput -Name "vision_fingerprint" -Value ([string]$vision.packageFingerprint)
+Write-GitHubOutput -Name "vision_version" -Value ([string]$vision.version)
 Write-GitHubOutput -Name "tts_rebuild" -Value $($ttsRebuild.Count -gt 0).ToString().ToLowerInvariant()
 Write-GitHubOutput -Name "tts_rebuild_fingerprint" -Value $ttsRebuildFingerprint
 Write-GitHubOutput -Name "needs_reused_engine_for_tts" -Value $(($ttsRebuild.Count -gt 0 -and $engine.action -eq "reuse").ToString().ToLowerInvariant())

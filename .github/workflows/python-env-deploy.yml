@@ -25,6 +25,11 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Use Python 3.11 for runtime validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.9'
+
       - name: Test runtime packaging rules
         shell: powershell
         run: .\tests\runtime-packaging.tests.ps1
@@ -90,7 +95,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: vision-assets.zip
-          key: ${{ runner.os }}-runtime-vision-${{ steps.plan.outputs.vision_fingerprint }}
+          key: ${{ runner.os }}-runtime-vision-${{ steps.plan.outputs.vision_fingerprint }}-${{ steps.plan.outputs.vision_version }}
 
       - name: Restore engine environment needed by a TTS rebuild
         if: steps.plan.outputs.tts_rebuild == 'true' && steps.cache-tts.outputs.cache-hit != 'true' && (steps.plan.outputs.engine_action == 'reuse' || steps.cache-engine.outputs.cache-hit == 'true')
@@ -137,12 +142,17 @@ jobs:
       - name: Package Vision assets
         if: steps.plan.outputs.vision_action == 'rebuild' && steps.cache-vision.outputs.cache-hit != 'true'
         shell: powershell
-        run: .\scripts\package-vision-assets.ps1
+        run: .\scripts\package-vision-assets.ps1 -Version '${{ steps.plan.outputs.vision_version }}' -PythonExe (Get-Command python).Source
 
       - name: Reuse unchanged assets from the previous release
         if: startsWith(github.ref, 'refs/tags/env-v')
         shell: powershell
         run: .\scripts\reuse-runtime-assets.ps1
+
+      - name: Verify packaged Vision runtime
+        if: startsWith(github.ref, 'refs/tags/env-v')
+        shell: powershell
+        run: .\scripts\verify-vision-package.ps1 -ArchivePath vision-assets.zip -ExpectedVersion '${{ steps.plan.outputs.vision_version }}' -PythonExe (Get-Command python).Source
 
       - name: Generate and verify runtime manifest
         if: startsWith(github.ref, 'refs/tags/env-v')

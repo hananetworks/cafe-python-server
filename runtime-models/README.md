@@ -24,6 +24,8 @@ runtime-models/
     Qwen2.5-1.5B-Instruct.hef
   vision/
     vision-assets.json
+    # The package recipe adds version.txt and the complete pinned OpenCV wheel
+    # installation under site-packages/.
     models/
       person/yolov8n.hef
       gender/yolo26-gender-best.hef
@@ -67,7 +69,10 @@ runtime-models/
 
 ### `vision/`
 
-- Person/Gender/Age HEF와 실행 계약 메타데이터를 `vision-assets.zip`으로 별도 패키징합니다.
+- Person/Gender/Age HEF, 실행 계약 메타데이터와 Windows CPython 3.11용으로 고정한
+  `opencv-python-headless` 전체 wheel 설치 결과를 `vision-assets.zip`으로 별도 패키징합니다.
+- 압축 내부의 OpenCV 경로는 `site-packages/cv2/`이며 wheel의 DLL/PYD/data/dist-info를
+  모두 유지합니다.
 - `scripts/verify-vision-assets.ps1`가 파일 크기, SHA-256, 단일 VDevice 계약 및
   `Age productionReady=false`를 확인합니다.
 - Vision 변경은 VoiceOrder Hailo addon이나 STT/TTS package fingerprint를 바꾸지 않습니다.

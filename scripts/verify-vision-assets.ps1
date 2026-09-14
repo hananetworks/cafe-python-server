@@ -1,7 +1,15 @@
+param(
+    [string]$VisionRoot = ""
+)
+
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$VisionRoot = Join-Path $RepoRoot "runtime-models\vision"
+if ([string]::IsNullOrWhiteSpace($VisionRoot)) {
+    $VisionRoot = Join-Path $RepoRoot "runtime-models\vision"
+} else {
+    $VisionRoot = [System.IO.Path]::GetFullPath($VisionRoot)
+}
 $ManifestPath = Join-Path $VisionRoot "vision-assets.json"
 if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
     throw "Vision asset manifest is missing: $ManifestPath"
@@ -11,6 +19,17 @@ $Manifest = Get-Content -LiteralPath $ManifestPath -Raw -Encoding utf8 | Convert
 if ([int]$Manifest.schemaVersion -ne 1) { throw "Unsupported Vision asset manifest schema." }
 if ([string]$Manifest.handoffManifestSha256 -ne "925DA813062A52BDF0C55AB2739F027EB32D2FD7D2478058742DD1D869685672") {
     throw "Vision handoff manifest identity mismatch."
+}
+$PythonRuntime = $Manifest.pythonRuntime
+if ([string]$PythonRuntime.pythonVersion -ne "3.11" -or
+    [string]$PythonRuntime.platform -ne "win_amd64" -or
+    [string]$PythonRuntime.distribution -ne "opencv-python-headless" -or
+    [string]$PythonRuntime.version -ne "4.11.0.86" -or
+    [string]$PythonRuntime.wheel -ne "opencv_python_headless-4.11.0.86-cp37-abi3-win_amd64.whl" -or
+    [string]$PythonRuntime.wheelSha256 -ne "6C304DF9CAA7A6A5710B91709DD4786BF20A74D57672B3C31F7033CC638174CA" -or
+    [string]$PythonRuntime.importPath -ne "site-packages/cv2/__init__.py" -or
+    [string]$PythonRuntime.distInfoPath -ne "site-packages/opencv_python_headless-4.11.0.86.dist-info") {
+    throw "Vision OpenCV runtime contract mismatch."
 }
 if ([int]$Manifest.runtimeContract.processOwners -ne 1 -or [int]$Manifest.runtimeContract.vdeviceOwners -ne 1) {
     throw "Vision runtime must declare exactly one process owner and one VDevice owner."
