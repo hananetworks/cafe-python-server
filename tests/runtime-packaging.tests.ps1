@@ -32,6 +32,9 @@ function Get-Actions {
 }
 
 $testRoot = Join-Path $repoRoot (".runtime-test\{0}" -f [Guid]::NewGuid().ToString("N"))
+$hadGitHubRefName = Test-Path Env:GITHUB_REF_NAME
+$originalGitHubRefName = $env:GITHUB_REF_NAME
+$env:GITHUB_REF_NAME = $null
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 try {
     $visionDefinition = @(Get-PackageDefinitionsAtRef -Ref "HEAD") | Where-Object component -eq "vision" | Select-Object -First 1
@@ -185,6 +188,11 @@ try {
 
     Write-Host "PASS: $passed runtime packaging assertions."
 } finally {
+    if ($hadGitHubRefName) {
+        $env:GITHUB_REF_NAME = $originalGitHubRefName
+    } else {
+        Remove-Item Env:GITHUB_REF_NAME -ErrorAction SilentlyContinue
+    }
     if (Test-Path -LiteralPath $testRoot) {
         Remove-Item -LiteralPath $testRoot -Recurse -Force
     }
