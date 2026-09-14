@@ -34,13 +34,19 @@ function Get-Actions {
 $testRoot = Join-Path $repoRoot (".runtime-test\{0}" -f [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 try {
+    $visionDefinition = @(Get-PackageDefinitionsAtRef -Ref "HEAD") | Where-Object component -eq "vision" | Select-Object -First 1
+    Assert-Equal "vision-assets.zip" $visionDefinition.file "Vision must use an independent archive"
+    Assert-Equal "python/vision" $visionDefinition.extractTo "Vision must install into its own runtime root"
+    Assert-Equal $false $visionDefinition.required "Vision assets remain optional for older kiosk deployments"
+
     # A wheel-only Hailo source change must not select STT or any TTS package.
-    $base = @{ engine = "engine-a"; stt = "stt-a"; hailo = "hailo-a"; ttsCore = "core-a"; ttsKo = "ko-a"; ttsEn = "en-a" }
+    $base = @{ engine = "engine-a"; stt = "stt-a"; hailo = "hailo-a"; vision = "vision-a"; ttsCore = "core-a"; ttsKo = "ko-a"; ttsEn = "en-a" }
     $current = $base.Clone(); $current.hailo = "hailo-b"
     $actions = Get-Actions -Base $base -Current $current
     Assert-Equal "rebuild" $actions.hailo "Hailo should rebuild"
     Assert-Equal "reuse" $actions.engine "Engine should reuse after Hailo separation"
     Assert-Equal "reuse" $actions.stt "STT should reuse after a Hailo change"
+    Assert-Equal "reuse" $actions.vision "Vision should reuse after a Hailo change"
     Assert-Equal "reuse" $actions.ttsCore "TTS core should reuse after a Hailo change"
     Assert-Equal "reuse" $actions.ttsKo "Korean TTS should reuse after a Hailo change"
 
@@ -68,6 +74,15 @@ try {
     Assert-Equal "reuse" $actions.ttsEn "English TTS should reuse"
     Assert-Equal "reuse" $actions.ttsCore "TTS core should reuse after a language-only change"
     Assert-Equal "reuse" $actions.stt "STT should reuse after a language-only change"
+
+    # A Vision model or contract change selects only the Vision archive.
+    $current = $base.Clone(); $current.vision = "vision-b"
+    $actions = Get-Actions -Base $base -Current $current
+    Assert-Equal "rebuild" $actions.vision "Vision should rebuild"
+    Assert-Equal "reuse" $actions.engine "Engine should reuse after a Vision change"
+    Assert-Equal "reuse" $actions.stt "STT should reuse after a Vision change"
+    Assert-Equal "reuse" $actions.hailo "Hailo addon should reuse after a Vision change"
+    Assert-Equal "reuse" $actions.ttsCore "TTS core should reuse after a Vision change"
 
     $ttsConfig = Get-Content -LiteralPath (Join-Path $repoRoot "runtime-models\speech-assets.json") -Raw -Encoding utf8 | ConvertFrom-Json
     $changedConfig = ($ttsConfig | ConvertTo-Json -Depth 8 | ConvertFrom-Json)
@@ -138,6 +153,21 @@ try {
     $manifest = Get-Content (Join-Path $manifestOutput "runtime-manifest.json") -Raw | ConvertFrom-Json
     Assert-Equal $baseHash $manifest.packages.stt.sha256 "Manifest SHA256 should match the archive"
     Assert-Equal $baseSize $manifest.packages.stt.size "Manifest size should match the archive"
+
+    # A rebuilt Vision archive gets its own top-level/component version and hash.
+    $visionPlan = $plan | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+    $visionPlan.packages += [pscustomobject][ordered]@{
+        component = "vision"; file = "vision-assets.zip"; required = $false; extractTo = "python/vision"
+        sourceFingerprint = "vision-source"; recipeFingerprint = "vision-recipe"; packageFingerprint = "vision-package"
+        action = "rebuild"; version = "env-vNext"; baseSha256 = ""; baseSize = 0
+    }
+    Copy-Item -LiteralPath $baseZip -Destination (Join-Path $manifestOutput "vision-assets.zip")
+    Write-Utf8NoBom -Path $manifestPlanPath -Content ($visionPlan | ConvertTo-Json -Depth 8)
+    & (Join-Path $repoRoot "scripts\generate-runtime-artifacts.ps1") -PlanPath $manifestPlanPath -OutputDirectory $manifestOutput
+    & (Join-Path $repoRoot "scripts\verify-runtime-artifacts.ps1") -ManifestPath (Join-Path $manifestOutput "runtime-manifest.json") -AssetDirectory $manifestOutput -PlanPath $manifestPlanPath
+    $visionManifest = Get-Content (Join-Path $manifestOutput "runtime-manifest.json") -Raw | ConvertFrom-Json
+    Assert-Equal "env-vNext" $visionManifest.visionVersion "Manifest must expose the Vision component version"
+    Assert-Equal $baseHash $visionManifest.packages.vision.sha256 "Vision manifest SHA256 should match its archive"
 
     # Every PowerShell entry point must parse before CI starts a release build.
     foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $repoRoot "scripts") -Filter "*.ps1") {

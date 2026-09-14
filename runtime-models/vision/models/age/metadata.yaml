@@ -1,0 +1,35 @@
+description: Ultralytics YOLO26s-cls model trained on D:\Desktop\project\학습용\yolo26-gender-training-kit-20260903\training\yolo26_gender\workspace\aihub-fairface-age8\materialized\age-classification
+author: Ultralytics
+date: '2026-09-14T01:00:47.927681+09:00'
+version: 8.4.138
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 1
+task: classify
+head: Classify
+batch: 1
+imgsz:
+- 224
+- 224
+names:
+  0: age_0_2
+  1: age_3_9
+  2: age_10_19
+  3: age_20_29
+  4: age_30_39
+  5: age_40_49
+  6: age_50_59
+  7: age_60_plus
+args:
+  data: /home/yws/hailo-work/cheonan-demographics-hailo/inputs/age/calibration-only
+  name: hailo10h
+  fraction: 1.0
+  conf: null
+  iou: 0.7
+  quantize: 8
+  simplify: true
+channels: 3
+end2end: false
+hailo_arch: hailo10h
+nms: false
+semantic_baked: false

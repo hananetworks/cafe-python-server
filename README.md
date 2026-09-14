@@ -11,6 +11,7 @@ Current Guided VoiceOrder runtime tag: `env-v1.4.37`.
 - `tts-core-assets.zip`
 - `tts-hf-*.zip`
 - `hailo-addon.zip`
+- `vision-assets.zip`
 - `runtime-manifest.json`
 
 `env-v1.4.36` 이후 릴리즈는 패키지별 source/recipe fingerprint를 비교합니다. 내용이 같은
@@ -51,6 +52,18 @@ Current Guided VoiceOrder runtime tag: `env-v1.4.37`.
 
 모델 무결성은 `scripts/verify-voiceorder-assets.ps1`로 확인합니다.
 
+### 3. Vision 모델 변경
+
+- 위치: `runtime-models/vision/`
+- 결과: `vision-assets.zip`에만 반영
+- 검증: `scripts/verify-vision-assets.ps1`
+
+Vision 패키지는 Person/Gender/Age HEF와 메타데이터만 배포합니다. HailoRT wheel은 기존
+`hailo-addon.zip`에 유지되므로 Vision 모델만 바뀌어도 engine/STT/TTS/Hailo addon은
+재다운로드하지 않습니다. 실행 계층은 하나의 프로세스와 하나의 `VDevice`에서 세 Vision
+InferModel과 Whisper STT를 함께 소유해야 하며, 최종 4모델 동시부하는 실장비 검증 전까지
+`DEVICE VERIFICATION REQUIRED`입니다. Age는 계속 `productionReady=false`입니다.
+
 ## 프로세스 구성
 
 - TTS: 기존 FastAPI `api_server.py` 프로세스
@@ -66,7 +79,7 @@ HailoRT wheel은 `hailo-addon.zip/site-packages`에 포함됩니다. Python engi
 engine이 아니라 Hailo addon만 갱신합니다. 이 분리 구조로 전환하는 최초 릴리즈에서는
 engine과 Hailo addon이 한 번 함께 변경됩니다.
 
-### 3. TTS 실물 모델로 운영할 때
+### 4. TTS 실물 모델로 운영할 때
 
 - 위치:
   - `runtime-models/tts/core/piper_models/...`
@@ -77,7 +90,7 @@ engine과 Hailo addon이 한 번 함께 변경됩니다.
   - `tts-core-assets.zip`
   - `tts-hf-*.zip`
 
-### 4. TTS를 기존 방식으로 유지할 때
+### 5. TTS를 기존 방식으로 유지할 때
 
 - 위치: `runtime-models/speech-assets.json`
 - 의미: 다운로드할 Piper, Sherpa, Hugging Face, NLTK 목록 정의

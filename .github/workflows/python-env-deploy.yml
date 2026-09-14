@@ -41,6 +41,10 @@ jobs:
         shell: powershell
         run: .\scripts\verify-voiceorder-assets.ps1
 
+      - name: Verify Vision source assets
+        shell: powershell
+        run: .\scripts\verify-vision-assets.ps1
+
       - name: Resolve package reuse plan
         id: plan
         shell: powershell
@@ -79,6 +83,14 @@ jobs:
         with:
           path: hailo-addon.zip
           key: ${{ runner.os }}-runtime-hailo-${{ steps.plan.outputs.hailo_fingerprint }}
+
+      - name: Cache changed Vision assets
+        if: steps.plan.outputs.vision_action == 'rebuild'
+        id: cache-vision
+        uses: actions/cache@v3
+        with:
+          path: vision-assets.zip
+          key: ${{ runner.os }}-runtime-vision-${{ steps.plan.outputs.vision_fingerprint }}
 
       - name: Restore engine environment needed by a TTS rebuild
         if: steps.plan.outputs.tts_rebuild == 'true' && steps.cache-tts.outputs.cache-hit != 'true' && (steps.plan.outputs.engine_action == 'reuse' || steps.cache-engine.outputs.cache-hit == 'true')
@@ -121,6 +133,11 @@ jobs:
         if: steps.plan.outputs.hailo_action == 'rebuild' && steps.cache-hailo.outputs.cache-hit != 'true'
         shell: powershell
         run: .\scripts\package-hailo-addon.ps1
+
+      - name: Package Vision assets
+        if: steps.plan.outputs.vision_action == 'rebuild' && steps.cache-vision.outputs.cache-hit != 'true'
+        shell: powershell
+        run: .\scripts\package-vision-assets.ps1
 
       - name: Reuse unchanged assets from the previous release
         if: startsWith(github.ref, 'refs/tags/env-v')

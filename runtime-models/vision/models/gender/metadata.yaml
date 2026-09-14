@@ -1,0 +1,29 @@
+description: Ultralytics YOLO26s model trained on D:\Desktop\project\학습용\yolo26-gender-training-kit-20260903\training\yolo26_gender\workspace\dataset\male-female-jlls8-v1-curated\data.yaml
+author: Ultralytics
+date: '2026-09-14T00:00:22.837742+09:00'
+version: 8.4.138
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+head: Detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: female
+  1: male
+args:
+  data: /home/yws/hailo-work/cheonan-demographics-hailo/configs/gender-calibration-only.yaml
+  name: hailo10h
+  fraction: 1.0
+  conf: null
+  iou: 0.7
+  quantize: 8
+  simplify: true
+channels: 3
+end2end: true
+hailo_arch: hailo10h
+nms: false
+semantic_baked: false

@@ -61,6 +61,7 @@ $manifest = [ordered]@{
     ttsVersion = if ($ttsChanged) { $releaseVersion } elseif ($plan.baseTtsVersion) { [string]$plan.baseTtsVersion } else { Get-PackageVersion "ttsCore" }
     ttsCoreVersion = Get-PackageVersion "ttsCore"
     hailoVersion = Get-PackageVersion "hailo"
+    visionVersion = Get-PackageVersion "vision"
     packages = $packageMap
 }
 

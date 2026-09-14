@@ -110,6 +110,7 @@ function Get-PackageDefinitionsAtRef {
         [pscustomobject][ordered]@{ component = "engine"; file = "python-engine.zip"; required = $true; extractTo = "python/engine"; kind = "engine"; sourcePath = $null; configKey = $null },
         [pscustomobject][ordered]@{ component = "stt"; file = "stt-assets.zip"; required = $true; extractTo = "python/stt"; kind = "stt"; sourcePath = "runtime-models/stt"; configKey = $null },
         [pscustomobject][ordered]@{ component = "hailo"; file = "hailo-addon.zip"; required = $false; extractTo = "python/hailo"; kind = "hailo"; sourcePath = "runtime-models/hailo"; configKey = $null },
+        [pscustomobject][ordered]@{ component = "vision"; file = "vision-assets.zip"; required = $false; extractTo = "python/vision"; kind = "vision"; sourcePath = "runtime-models/vision"; configKey = $null },
         [pscustomobject][ordered]@{ component = "ttsCore"; file = "tts-core-assets.zip"; required = $true; extractTo = "python/tts/core"; kind = "ttsCore"; sourcePath = "runtime-models/tts/core"; configKey = $null }
     )
     $definitions += @(Get-TtsPackageDefinitionsAtRef -Ref $Ref)
@@ -156,6 +157,10 @@ function Get-ComponentSourceFingerprint {
             $records += @(Get-GitTreeRecords -Ref $Ref -Paths @("libs") -IncludePattern '/hailort-[^/]+\.whl$')
             return Get-RecordFingerprint -Label "hailo-source-v1" -Records $records
         }
+        "vision" {
+            $records = Get-GitTreeRecords -Ref $Ref -Paths @($Definition.sourcePath) -ExcludePattern '/\.gitkeep$'
+            return Get-RecordFingerprint -Label "vision-source-v1" -Records $records
+        }
         "ttsCore" {
             $local = Get-GitTreeRecords -Ref $Ref -Paths @($Definition.sourcePath) -ExcludePattern '/\.gitkeep$'
             if ($local.Count -gt 0) {
@@ -195,6 +200,7 @@ function Get-RecipeFingerprint {
         "engine" { @("scripts/build-python-env.ps1", "scripts/package-engine.ps1") }
         "stt" { @("scripts/package-stt-assets.ps1") }
         "hailo" { @("scripts/package-hailo-addon.ps1") }
+        "vision" { @("scripts/package-vision-assets.ps1", "scripts/verify-vision-assets.ps1") }
         { $_ -in @("ttsCore", "ttsHfLocal", "ttsHfConfig") } { @("scripts/prepare-speech-assets.ps1", "scripts/package-tts-assets.ps1", "scripts/get-runtime-model-layout.ps1") }
         default { throw "Unknown package kind: $($Definition.kind)" }
     }

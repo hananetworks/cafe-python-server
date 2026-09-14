@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "source": "cheonan-vision-npu-handoff-20260914",
+  "handoffManifestSha256": "925DA813062A52BDF0C55AB2739F027EB32D2FD7D2478058742DD1D869685672",
+  "models": {
+    "person": { "file": "models/person/yolov8n.hef", "sha256": "557F080AFE1DFB9CEF02CFEA81EFC42BA33B8093E9E51CBAFD9AAE717A7D90E7", "bytes": 7032832, "input": "640x640 RGB UINT8", "output": "HAILO_NMS_BY_CLASS" },
+    "gender": { "file": "models/gender/yolo26-gender-best.hef", "metadata": "models/gender/metadata.yaml", "sha256": "391E8C93B57B468BDC8449C1B678F8C8B13DB05EE30C3C2469E23A869B607B40", "bytes": 11595776, "decoder": "ultralytics-8.4.138-hailobackend-raw-six-tensor" },
+    "age": { "file": "models/age/yolo26-age-best.hef", "metadata": "models/age/metadata.yaml", "sha256": "86C0C75BB67DBAD04EFBBE90178446DC1F877D9DFCD27E8A942D2432F40D8257", "bytes": 6893568, "input": "224x224 RGB UINT8 face crop", "output": "UINT8 softmax", "dequantization": "(raw - 0) * (1 / 255)" }
+  },
+  "runtimeContract": { "processOwners": 1, "vdeviceOwners": 1, "queueCapacity": 1, "personSchedule": "latest-frame-realtime", "genderPeriodSeconds": 1.0, "ageRequiresGenderFaceBbox": true, "ageMaxFrequencyHz": 1.0, "persistFrames": false, "persistFaceCrops": false, "combinedWithWhisperStt": "DEVICE_VERIFICATION_REQUIRED" },
+  "cameraContract": { "backend": "DSHOW", "fourcc": "MJPG", "width": 1920, "height": 1080, "fps": 30, "openTimeParamsRequired": true },
+  "productionReady": { "person": true, "gender": true, "age": false, "combinedWithWhisperStt": false },
+  "validationEvidence": {
+    "threeVisionModels": { "status": "PASS", "result": "validation/three-hef/pass/live-20260914-r2.json", "sha256": "FBC9F6074C9460663553D08E1651D521DC1C24D0DF1CCE499982C8FA9DE53E9C", "vdeviceOwners": 1, "resourceErrors": 0 },
+    "productionDraft": "WRITTEN_NOT_RUN_NOT_VERIFIED",
+    "combinedWithWhisperStt": "DEVICE_VERIFICATION_REQUIRED"
+  }
+}

@@ -77,6 +77,7 @@ $ttsRebuild = @($rebuild | Where-Object { $_.component -eq "ttsCore" -or $_.comp
 $engine = $plan.packages | Where-Object { $_.component -eq "engine" } | Select-Object -First 1
 $stt = $plan.packages | Where-Object { $_.component -eq "stt" } | Select-Object -First 1
 $hailo = $plan.packages | Where-Object { $_.component -eq "hailo" } | Select-Object -First 1
+$vision = $plan.packages | Where-Object { $_.component -eq "vision" } | Select-Object -First 1
 $ttsRebuildFingerprint = if ($ttsRebuild.Count -gt 0) {
     Get-RecordFingerprint -Label "tts-rebuild-set-v1" -Records @($ttsRebuild | ForEach-Object { "$($_.component)`0$($_.packageFingerprint)" })
 } else { "none" }
@@ -88,6 +89,8 @@ Write-GitHubOutput -Name "stt_action" -Value ([string]$stt.action)
 Write-GitHubOutput -Name "stt_fingerprint" -Value ([string]$stt.packageFingerprint)
 Write-GitHubOutput -Name "hailo_action" -Value ([string]$hailo.action)
 Write-GitHubOutput -Name "hailo_fingerprint" -Value ([string]$hailo.packageFingerprint)
+Write-GitHubOutput -Name "vision_action" -Value ([string]$vision.action)
+Write-GitHubOutput -Name "vision_fingerprint" -Value ([string]$vision.packageFingerprint)
 Write-GitHubOutput -Name "tts_rebuild" -Value $($ttsRebuild.Count -gt 0).ToString().ToLowerInvariant()
 Write-GitHubOutput -Name "tts_rebuild_fingerprint" -Value $ttsRebuildFingerprint
 Write-GitHubOutput -Name "needs_reused_engine_for_tts" -Value $(($ttsRebuild.Count -gt 0 -and $engine.action -eq "reuse").ToString().ToLowerInvariant())

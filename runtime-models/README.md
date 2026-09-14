@@ -9,6 +9,7 @@ STT와 Hailo는 여기 있는 파일이 그대로 패키징에 들어갑니다.
 
 - STT: `runtime-models/` 실물 폴더 기준
 - Hailo: `runtime-models/` 실물 폴더 기준
+- Vision: `runtime-models/vision/` 실물 폴더 기준
 - TTS: 실물 폴더가 있으면 우선 사용, 없으면 `speech-assets.json` fallback 사용
 
 ## 폴더 구조
@@ -21,6 +22,14 @@ runtime-models/
     models/
       Whisper-Small.hef
     Qwen2.5-1.5B-Instruct.hef
+  vision/
+    vision-assets.json
+    models/
+      person/yolov8n.hef
+      gender/yolo26-gender-best.hef
+      gender/metadata.yaml
+      age/yolo26-age-best.hef
+      age/metadata.yaml
   tts/
     core/
       piper_models/
@@ -55,6 +64,13 @@ runtime-models/
 
 - 있으면 `hailo-addon.zip`에 같이 포함됩니다.
 - 없으면 없이 빌드됩니다.
+
+### `vision/`
+
+- Person/Gender/Age HEF와 실행 계약 메타데이터를 `vision-assets.zip`으로 별도 패키징합니다.
+- `scripts/verify-vision-assets.ps1`가 파일 크기, SHA-256, 단일 VDevice 계약 및
+  `Age productionReady=false`를 확인합니다.
+- Vision 변경은 VoiceOrder Hailo addon이나 STT/TTS package fingerprint를 바꾸지 않습니다.
 
 ### `tts/core/`
 
