@@ -108,6 +108,7 @@ function Get-PackageDefinitionsAtRef {
 
     $definitions = @(
         [pscustomobject][ordered]@{ component = "engine"; file = "python-engine.zip"; required = $true; extractTo = "python/engine"; kind = "engine"; sourcePath = $null; configKey = $null },
+        [pscustomobject][ordered]@{ component = "qwenEngine"; file = "qwen-engine.zip"; required = $true; extractTo = "python/qwen-engine"; kind = "qwenEngine"; sourcePath = $null; configKey = $null },
         [pscustomobject][ordered]@{ component = "stt"; file = "stt-assets.zip"; required = $true; extractTo = "python/stt"; kind = "stt"; sourcePath = "runtime-models/stt"; configKey = $null },
         [pscustomobject][ordered]@{ component = "hailo"; file = "hailo-addon.zip"; required = $false; extractTo = "python/hailo"; kind = "hailo"; sourcePath = "runtime-models/hailo"; configKey = $null },
         [pscustomobject][ordered]@{ component = "vision"; file = "vision-assets.zip"; required = $false; extractTo = "python/vision"; kind = "vision"; sourcePath = "runtime-models/vision"; configKey = $null },
@@ -147,6 +148,12 @@ function Get-ComponentSourceFingerprint {
             $records += "embedded-python`03.11.9"
             $records += "get-pip`0https://bootstrap.pypa.io/get-pip.py"
             return Get-RecordFingerprint -Label "engine-source-v1" -Records $records
+        }
+        "qwenEngine" {
+            $records = @(Get-GitTreeRecords -Ref $Ref -Paths @("qwen-runtime-requirements.txt"))
+            $records += "embedded-python`03.11.9"
+            $records += "get-pip`0https://bootstrap.pypa.io/get-pip.py"
+            return Get-RecordFingerprint -Label "qwen-engine-source-v1" -Records $records
         }
         "stt" {
             $records = Get-GitTreeRecords -Ref $Ref -Paths @($Definition.sourcePath) -ExcludePattern '/\.gitkeep$'
@@ -198,6 +205,7 @@ function Get-RecipeFingerprint {
 
     $files = switch ($Definition.kind) {
         "engine" { @("scripts/build-python-env.ps1", "scripts/package-engine.ps1") }
+        "qwenEngine" { @("scripts/build-qwen-env.ps1", "scripts/package-qwen-engine.ps1", "scripts/verify-qwen-runtime.ps1") }
         "stt" { @("scripts/package-stt-assets.ps1") }
         "hailo" { @("scripts/package-hailo-addon.ps1") }
         "vision" { @("scripts/package-vision-assets.ps1", "scripts/verify-vision-assets.ps1", "scripts/verify-vision-package.ps1") }
@@ -302,8 +310,8 @@ function New-RuntimePackagePlan {
         $baseSha = if ($basePackage) { [string]$basePackage.sha256 } else { "" }
         $baseVersion = if ($basePackage -and $basePackage.version) { [string]$basePackage.version } else { "" }
 
-        if ($action -eq "reuse" -and (-not $basePackage -or -not $baseSha -or $baseSize -le 0 -or -not $asset)) {
-            throw "Cannot reuse $component because the $BaseRelease metadata or asset '$baseFile' is incomplete."
+        if ($action -eq "reuse" -and (-not $basePackage -or -not $baseSha -or $baseSize -le 0)) {
+            throw "Cannot reuse $component because the $BaseRelease manifest metadata is incomplete."
         }
 
         [pscustomobject][ordered]@{

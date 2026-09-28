@@ -41,6 +41,11 @@ try {
     Assert-Equal "vision-assets.zip" $visionDefinition.file "Vision must use an independent archive"
     Assert-Equal "python/vision" $visionDefinition.extractTo "Vision must install into its own runtime root"
     Assert-Equal $false $visionDefinition.required "Vision assets remain optional for older kiosk deployments"
+
+    $qwenDefinition = @(Get-PackageDefinitionsAtRef -Ref "HEAD") | Where-Object component -eq "qwenEngine" | Select-Object -First 1
+    Assert-Equal "qwen-engine.zip" $qwenDefinition.file "Qwen runtime must use an independent archive"
+    Assert-Equal "python/qwen-engine" $qwenDefinition.extractTo "Qwen runtime must install into its own runtime root"
+    Assert-Equal $true $qwenDefinition.required "Natural VoiceOrder requires the isolated Qwen engine"
     $visionContract = Get-Content -LiteralPath (Join-Path $repoRoot "runtime-models\vision\vision-assets.json") -Raw -Encoding utf8 | ConvertFrom-Json
     Assert-Equal "3.11" $visionContract.pythonRuntime.pythonVersion "Vision OpenCV must target CPython 3.11"
     Assert-Equal "win_amd64" $visionContract.pythonRuntime.platform "Vision OpenCV must target 64-bit Windows"
@@ -163,6 +168,15 @@ try {
     $manifest = Get-Content (Join-Path $manifestOutput "runtime-manifest.json") -Raw | ConvertFrom-Json
     Assert-Equal $baseHash $manifest.packages.stt.sha256 "Manifest SHA256 should match the archive"
     Assert-Equal $baseSize $manifest.packages.stt.size "Manifest size should match the archive"
+
+    # Reused packages remain manifest references and no longer need to be copied
+    # into every new release's artifact directory.
+    Remove-Item -LiteralPath (Join-Path $manifestOutput "stt-assets.zip") -Force
+    & (Join-Path $repoRoot "scripts\generate-runtime-artifacts.ps1") -PlanPath $manifestPlanPath -OutputDirectory $manifestOutput
+    & (Join-Path $repoRoot "scripts\verify-runtime-artifacts.ps1") -ManifestPath (Join-Path $manifestOutput "runtime-manifest.json") -AssetDirectory $manifestOutput -PlanPath $manifestPlanPath
+    $referencedManifest = Get-Content (Join-Path $manifestOutput "runtime-manifest.json") -Raw | ConvertFrom-Json
+    Assert-Equal "env-v1.4.36" $referencedManifest.packages.stt.version "Reused package should retain its immutable origin release"
+    Assert-Equal $baseHash $referencedManifest.packages.stt.sha256 "Referenced package should retain its exact SHA256"
 
     # A rebuilt Vision archive gets its own top-level/component version and hash.
     $visionPlan = $plan | ConvertTo-Json -Depth 8 | ConvertFrom-Json

@@ -25,6 +25,14 @@ foreach ($property in $manifest.packages.PSObject.Properties) {
     $seenAssets[[string]$package.asset] = $true
 
     $path = Join-Path $AssetDirectory ([string]$package.asset)
+    $isCurrentReleaseAsset = [string]$package.version -eq [string]$manifest.releaseVersion
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        if ($isCurrentReleaseAsset) {
+            throw "$component current-release asset is missing: $path"
+        }
+        continue
+    }
+
     & 7z t $path | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "$component release archive failed the 7-Zip integrity test." }
     $actualSize = (Get-Item -LiteralPath $path).Length

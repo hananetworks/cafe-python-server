@@ -75,6 +75,7 @@ Write-Utf8NoBom -Path ([System.IO.Path]::GetFullPath($PlanPath)) -Content $planJ
 $rebuild = @($plan.packages | Where-Object { $_.action -eq "rebuild" })
 $ttsRebuild = @($rebuild | Where-Object { $_.component -eq "ttsCore" -or $_.component -like "tts*" })
 $engine = $plan.packages | Where-Object { $_.component -eq "engine" } | Select-Object -First 1
+$qwenEngine = $plan.packages | Where-Object { $_.component -eq "qwenEngine" } | Select-Object -First 1
 $stt = $plan.packages | Where-Object { $_.component -eq "stt" } | Select-Object -First 1
 $hailo = $plan.packages | Where-Object { $_.component -eq "hailo" } | Select-Object -First 1
 $vision = $plan.packages | Where-Object { $_.component -eq "vision" } | Select-Object -First 1
@@ -85,6 +86,9 @@ $ttsRebuildFingerprint = if ($ttsRebuild.Count -gt 0) {
 Write-GitHubOutput -Name "base_release" -Value $BaseRelease
 Write-GitHubOutput -Name "engine_action" -Value ([string]$engine.action)
 Write-GitHubOutput -Name "engine_fingerprint" -Value ([string]$engine.packageFingerprint)
+Write-GitHubOutput -Name "qwen_engine_action" -Value ([string]$qwenEngine.action)
+Write-GitHubOutput -Name "qwen_engine_fingerprint" -Value ([string]$qwenEngine.packageFingerprint)
+Write-GitHubOutput -Name "qwen_engine_version" -Value ([string]$qwenEngine.version)
 Write-GitHubOutput -Name "stt_action" -Value ([string]$stt.action)
 Write-GitHubOutput -Name "stt_fingerprint" -Value ([string]$stt.packageFingerprint)
 Write-GitHubOutput -Name "hailo_action" -Value ([string]$hailo.action)

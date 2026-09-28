@@ -50,6 +50,10 @@ jobs:
         shell: powershell
         run: .\scripts\verify-voiceorder-assets.ps1
 
+      - name: Verify Qwen model reference
+        shell: powershell
+        run: .\scripts\verify-qwen-model-reference.ps1
+
       - name: Verify Vision source assets
         shell: powershell
         run: .\scripts\verify-vision-assets.ps1
@@ -66,6 +70,14 @@ jobs:
         with:
           path: python-engine.zip
           key: ${{ runner.os }}-runtime-engine-${{ steps.plan.outputs.engine_fingerprint }}
+
+      - name: Cache changed Qwen engine
+        if: steps.plan.outputs.qwen_engine_action == 'rebuild'
+        id: cache-qwen-engine
+        uses: actions/cache@v3
+        with:
+          path: qwen-engine.zip
+          key: ${{ runner.os }}-runtime-qwen-engine-${{ steps.plan.outputs.qwen_engine_fingerprint }}
 
       - name: Cache changed STT package
         if: steps.plan.outputs.stt_action == 'rebuild'
@@ -122,6 +134,16 @@ jobs:
         shell: powershell
         run: .\scripts\package-engine.ps1
 
+      - name: Build Qwen engine
+        if: steps.plan.outputs.qwen_engine_action == 'rebuild' && steps.cache-qwen-engine.outputs.cache-hit != 'true'
+        shell: powershell
+        run: .\scripts\build-qwen-env.ps1 -Force
+
+      - name: Package Qwen engine
+        if: steps.plan.outputs.qwen_engine_action == 'rebuild' && steps.cache-qwen-engine.outputs.cache-hit != 'true'
+        shell: powershell
+        run: .\scripts\package-qwen-engine.ps1
+
       - name: Package STT assets
         if: steps.plan.outputs.stt_action == 'rebuild' && steps.cache-stt.outputs.cache-hit != 'true'
         shell: powershell
@@ -148,13 +170,9 @@ jobs:
         shell: powershell
         run: .\scripts\package-vision-assets.ps1 -Version '${{ steps.plan.outputs.vision_version }}' -PythonExe (Get-Command python).Source
 
-      - name: Reuse unchanged assets from the previous release
-        if: startsWith(github.ref, 'refs/tags/env-v')
-        shell: powershell
-        run: .\scripts\reuse-runtime-assets.ps1
 
       - name: Verify packaged Vision runtime
-        if: startsWith(github.ref, 'refs/tags/env-v')
+        if: startsWith(github.ref, 'refs/tags/env-v') && steps.plan.outputs.vision_action == 'rebuild'
         shell: powershell
         run: .\scripts\verify-vision-package.ps1 -ArchivePath vision-assets.zip -ExpectedVersion '${{ steps.plan.outputs.vision_version }}' -PythonExe (Get-Command python).Source
 
@@ -173,7 +191,9 @@ jobs:
           New-Item -ItemType Directory -Path $env:ARTIFACT_DIR -Force | Out-Null
           $manifest = Get-Content runtime-manifest.json -Raw -Encoding utf8 | ConvertFrom-Json
           foreach ($package in $manifest.packages.PSObject.Properties.Value) {
-            Copy-Item -LiteralPath $package.asset -Destination $env:ARTIFACT_DIR
+            if ([string]$package.version -eq [string]$manifest.releaseVersion) {
+              Copy-Item -LiteralPath $package.asset -Destination $env:ARTIFACT_DIR
+            }
           }
           foreach ($metadata in @('runtime-manifest.json', 'runtime-manifest.json.sha256', 'hash.txt')) {
             Copy-Item -LiteralPath $metadata -Destination $env:ARTIFACT_DIR

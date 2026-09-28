@@ -18,7 +18,9 @@ if (@($existingReleases | Where-Object { $_.tag_name -eq $Tag }).Count -gt 0) {
 }
 
 $manifest = Get-Content -LiteralPath (Join-Path $ArtifactDirectory "runtime-manifest.json") -Raw -Encoding utf8 | ConvertFrom-Json
-$assetPaths = @($manifest.packages.PSObject.Properties.Value | ForEach-Object { Join-Path $ArtifactDirectory $_.asset })
+$assetPaths = @($manifest.packages.PSObject.Properties.Value |
+    Where-Object { [string]$_.version -eq [string]$manifest.releaseVersion } |
+    ForEach-Object { Join-Path $ArtifactDirectory $_.asset })
 $assetPaths += @(
     (Join-Path $ArtifactDirectory "runtime-manifest.json"),
     (Join-Path $ArtifactDirectory "runtime-manifest.json.sha256"),

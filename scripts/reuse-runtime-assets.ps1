@@ -33,8 +33,9 @@ foreach ($package in $packages) {
             Copy-Item -LiteralPath $source -Destination $target
         } else {
             if ([string]::IsNullOrWhiteSpace($Repository)) { throw "Repository is required to download release assets." }
-            & gh release download $plan.baseRelease --repo $Repository --pattern ([string]$package.file) --dir $destination --clobber
-            if ($LASTEXITCODE -ne 0) { throw "Failed to download $($package.file) from $($plan.baseRelease)." }
+            $sourceRelease = if ($package.version) { [string]$package.version } else { [string]$plan.baseRelease }
+            & gh release download $sourceRelease --repo $Repository --pattern ([string]$package.file) --dir $destination --clobber
+            if ($LASTEXITCODE -ne 0) { throw "Failed to download $($package.file) from $sourceRelease." }
         }
     }
 
@@ -44,7 +45,8 @@ foreach ($package in $packages) {
     }
     $actualHash = Get-RequiredFileHash -Path $target
     if ($actualHash -ne [string]$package.baseSha256) {
-        throw "$($package.file) SHA256 mismatch while reusing $($plan.baseRelease)."
+        $sourceRelease = if ($package.version) { [string]$package.version } else { [string]$plan.baseRelease }
+        throw "$($package.file) SHA256 mismatch while reusing $sourceRelease."
     }
     Write-Host "Reused exact release asset: $($package.file)"
 }
