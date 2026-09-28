@@ -13,17 +13,16 @@ if ([string]::IsNullOrWhiteSpace($releaseVersion)) { $releaseVersion = "env-dev"
 $packageMap = [ordered]@{}
 $hashLines = @()
 foreach ($planned in @($plan.packages)) {
-    $assetPath = Join-Path $OutputDirectory ([string]$planned.file)
-    $hash = Get-RequiredFileHash -Path $assetPath
-    $size = (Get-Item -LiteralPath $assetPath).Length
-
     if ($planned.action -eq "reuse") {
-        if ($hash -ne [string]$planned.baseSha256) {
-            throw "$($planned.file) was marked for reuse but its SHA256 changed."
+        $hash = ([string]$planned.baseSha256).ToUpperInvariant()
+        $size = [int64]$planned.baseSize
+        if ([string]::IsNullOrWhiteSpace($hash) -or $size -le 0) {
+            throw "$($planned.component) reuse metadata is incomplete."
         }
-        if ($size -ne [int64]$planned.baseSize) {
-            throw "$($planned.file) was marked for reuse but its size changed."
-        }
+    } else {
+        $assetPath = Join-Path $OutputDirectory ([string]$planned.file)
+        $hash = Get-RequiredFileHash -Path $assetPath
+        $size = (Get-Item -LiteralPath $assetPath).Length
     }
 
     $componentVersion = if ($planned.action -eq "reuse") { [string]$planned.version } else { $releaseVersion }
@@ -51,17 +50,25 @@ function Get-PackageVersion([string]$Component) {
 
 $ttsPackages = @($plan.packages | Where-Object { $_.component -eq "ttsCore" -or $_.component -like "tts*" })
 $ttsChanged = @($ttsPackages | Where-Object { $_.action -eq "rebuild" }).Count -gt 0
+$qwenModelReferencePath = Join-Path (Split-Path $PSScriptRoot -Parent) "runtime-models\qwen3-asr.json"
+$qwenModelReference = if (Test-Path -LiteralPath $qwenModelReferencePath -PathType Leaf) {
+    Get-Content -LiteralPath $qwenModelReferencePath -Raw -Encoding utf8 | ConvertFrom-Json
+} else {
+    $null
+}
 $manifest = [ordered]@{
     manifestVersion = 2
     sourceFingerprintAlgorithm = [string]$plan.sourceFingerprintAlgorithm
     releaseVersion = $releaseVersion
     baseRelease = [string]$plan.baseRelease
     engineVersion = Get-PackageVersion "engine"
+    qwenEngineVersion = Get-PackageVersion "qwenEngine"
     sttVersion = Get-PackageVersion "stt"
     ttsVersion = if ($ttsChanged) { $releaseVersion } elseif ($plan.baseTtsVersion) { [string]$plan.baseTtsVersion } else { Get-PackageVersion "ttsCore" }
     ttsCoreVersion = Get-PackageVersion "ttsCore"
     hailoVersion = Get-PackageVersion "hailo"
     visionVersion = Get-PackageVersion "vision"
+    externalModels = if ($qwenModelReference) { [ordered]@{ qwenAsr = $qwenModelReference } } else { [ordered]@{} }
     packages = $packageMap
 }
 

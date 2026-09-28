@@ -14,3 +14,4 @@ runtime-manifest.json.sha256
 runtime-package-plan.json
 .runtime-work/
 .runtime-test/
+qwen-env/
